@@ -3,12 +3,14 @@ using Adapt.PresentationSamples.Standard.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Xml.Serialization;
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
+using XamarinFormsTreeView.TreeViewEx;
 
 namespace Adapt.PresentationSamples
 {
@@ -18,12 +20,56 @@ namespace Adapt.PresentationSamples
         public MainPage()
         {
             InitializeComponent();
+            initTree();
+
+            txtKeyword.Completed += TxtKeyword_Completed;
+        }
+
+        private string oldKeyword = "";
+
+        private void TxtKeyword_Completed(object sender, EventArgs e)
+        {
+            var curKeyword = txtKeyword.Text.Trim();
+            if(curKeyword.Equals(oldKeyword,  StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+            else
+            {
+                TheTreeView.Clear();
+
+                if (curKeyword.Equals(""))
+                {
+                    TheTreeView.RootModels = rootModelItems;
+                    TheTreeView.FirstCreateUIElement();
+                    oldKeyword = "";
+                    return;
+                }
+
+                var search_result = new ObservableCollection<TreeNodeModel>();
+                var found = TreeViewEx.SearchModels(rootModelItems, curKeyword.ToUpper(), ref search_result);                
+
+                TheTreeView.RootModels = search_result;
+                TheTreeView.FirstCreateUIElement();
+                oldKeyword = curKeyword;
+            }
         }
 
         private bool _IsLoaded;
 
+        IList<TreeNodeModel> rootModelItems;
+
         protected override void OnAppearing()
         {
+
+
+            base.OnAppearing();
+        }
+
+        private void initTree()
+        {
+            Stopwatch sw = new Stopwatch();
+
             if (_IsLoaded)
             {
                 return;
@@ -31,6 +77,9 @@ namespace Adapt.PresentationSamples
 
             _IsLoaded = true;
 
+            sw.Start();
+
+            /*
             var assembly = typeof(MainPage).GetTypeInfo().Assembly;
             var stream = assembly.GetManifestResourceStream("XamarinFormsTreeView.Resource.XamlItemGroups.xml");
             string xml;
@@ -38,19 +87,78 @@ namespace Adapt.PresentationSamples
             {
                 xml = reader.ReadToEnd();
             }
+            sw.Stop();
+
+            Console.WriteLine("Performance test, Load xml: {0}ms", sw.ElapsedMilliseconds);
+            sw.Restart();
 
             var xamlItemGroups = (XamlItemGroup)DeserialiseObject(xml, typeof(XamlItemGroup));
+            sw.Stop();
+            Console.WriteLine("Performance test, DeserialiseObject xml: {0}ms", sw.ElapsedMilliseconds);
 
-            var rootNodes = ProcessXamlItemGroups(xamlItemGroups);
+            sw.Restart();
 
-            foreach (var node in rootNodes)
+            var rootNodes = ProcessXamlItemGroups(xamlItemGroups, true);
+            sw.Stop();
+            Console.WriteLine("Performance test, ProcessXamlItemGroups: {0}ms", sw.ElapsedMilliseconds);
+
+            sw.Restart();
+            //foreach (var node in rootNodes)
+            //{
+            //    var xamlItemGroup = (XamlItemGroup)node.BindingContext;
+            //}
+
+            ////TheTreeView.RootNodes = rootNodes;
+            */
+
+            rootModelItems = new ObservableCollection<TreeNodeModel>();
+
+
+            for (int i = 0; i < 5; i++)
             {
-                var xamlItemGroup = (XamlItemGroup)node.BindingContext;
+                var subItem = new TreeNodeModel()
+                {
+                    Title = string.Format("Lvel 1: {0}", i)
+                };
+
+
+                for (int j = 0; j < 5; j++)
+                {
+                    var subItem2 = new TreeNodeModel()
+                    {
+                        Title = string.Format("Lvel 2: {0}/{1}", i, j)
+                    };
+                    subItem.SubItems.Add(subItem2);
+
+                    for (int k = 0; k < 5; k++)
+                    {
+                        var subItem3 = new TreeNodeModel()
+                        {
+                            Title = string.Format("Lvel 3: {0}/{1}/{2}", i, j, k)
+                        };
+                        subItem2.SubItems.Add(subItem3);
+
+                        for (int m = 0; m < 5; m++)
+                        {
+                            var subItem4 = new TreeNodeModel()
+                            {
+                                Title = string.Format("Lvel 4: {0}/{1}/{2}/{3}", i, j, k, m)
+                            };
+                            subItem3.SubItems.Add(subItem4);
+                        }
+                    }
+                }
+
+                rootModelItems.Add(subItem);
             }
 
-            TheTreeView.RootNodes = rootNodes;
 
-            base.OnAppearing();
+
+            TheTreeView.RootModels = rootModelItems;
+            TheTreeView.FirstCreateUIElement();
+
+            sw.Stop();
+            Console.WriteLine("Performance test, RootNodes assigned: {0}ms", sw.ElapsedMilliseconds);
         }
 
         private static void ProcessXamlItems(TreeViewNode node, XamlItemGroup xamlItemGroup)
@@ -78,7 +186,7 @@ namespace Adapt.PresentationSamples
 
         private static TreeViewNode CreateTreeViewNode(object bindingContext, Label label, bool isItem)
         {
-           var node= new TreeViewNode
+           var node = new TreeViewNode
             {
                 BindingContext = bindingContext,
                 Content = new StackLayout
@@ -94,11 +202,12 @@ namespace Adapt.PresentationSamples
                             label
                         },
                     Orientation = StackOrientation.Horizontal
-                }
+                },
+                IsLoaded = false
             };
 
             //set DataTemplate for expand button content
-            node.ExpandButtonTemplate = new DataTemplate(() => new ExpandButtonContent { BindingContext = node});
+            node.ExpandButtonTemplate = new DataTemplate(() => new ExpandButtonContentView { BindingContext = node});
 
             return node;
         }
@@ -138,31 +247,63 @@ namespace Adapt.PresentationSamples
             }
 
         }
-            private static ObservableCollection<TreeViewNode> ProcessXamlItemGroups(XamlItemGroup xamlItemGroups)
+        private static ObservableCollection<TreeViewNode> ProcessXamlItemGroups(XamlItemGroup xamlItemGroups, Boolean isRoot)
         {
             var rootNodes = new ObservableCollection<TreeViewNode>();
 
+            Stopwatch sw1 = new Stopwatch();
+            Stopwatch sw2 = new Stopwatch();
+            Stopwatch sw3 = new Stopwatch();
+            Stopwatch sw4 = new Stopwatch();
+
+            Stopwatch swTotal = new Stopwatch();
+            swTotal.Start();
+            
+
             foreach (var xamlItemGroup in xamlItemGroups.Children.OrderBy(xig => xig.Name))
             {
-
+                sw1.Start();
                 var label = new Label
                 {
                     VerticalOptions = LayoutOptions.Center,
                     TextColor = Color.Black
                 };
                 label.SetBinding(Label.TextProperty, "Name");
+                sw1.Stop();
 
+                //创建当前分类节点
+                sw2.Start();
                 var groupTreeViewNode = CreateTreeViewNode(xamlItemGroup, label, false);
 
                 rootNodes.Add(groupTreeViewNode);
 
-                groupTreeViewNode.Children = ProcessXamlItemGroups(xamlItemGroup);
+                sw2.Stop();
 
+                //创建当前分类节点下的子分类节点,递归调用
+                sw3.Start();
+                groupTreeViewNode.Children = ProcessXamlItemGroups(xamlItemGroup, false);
+                sw3.Stop();
+
+                //创建当前分类下的普通节点(不可展开的，非分类节点)， 循环调用
+                sw4.Start();
                 foreach (var xamlItem in xamlItemGroup.XamlItems)
                 {
                     CreateXamlItem(groupTreeViewNode.Children, xamlItem);
                 }
+                sw4.Stop();
 
+            }
+
+
+            swTotal.Stop();
+
+            if(isRoot)
+            {
+                Console.WriteLine("sw1 cost: {0} ms", sw1.ElapsedMilliseconds);
+                Console.WriteLine("sw2 cost: {0} ms", sw2.ElapsedMilliseconds);
+                Console.WriteLine("sw3 cost: {0} ms", sw3.ElapsedMilliseconds);
+                Console.WriteLine("sw4 cost: {0} ms", sw4.ElapsedMilliseconds);
+                Console.WriteLine("total cost: {0} ms", swTotal.ElapsedMilliseconds);
             }
 
             return rootNodes;

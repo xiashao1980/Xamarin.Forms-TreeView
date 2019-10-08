@@ -1,12 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-            xmlns:controls="clr-namespace:Xamarin.Forms;"
+            xmlns:controls="clr-namespace:XamarinFormsTreeView.TreeViewEx;"
 
             Title="Samples"
              x:Class="Adapt.PresentationSamples.MainPage"
             >
 
-    <controls:TreeView BackgroundColor="White"  x:Name="TheTreeView" Margin="4"  />
+    <StackLayout Orientation="Vertical">
+        <Entry x:Name="txtKeyword" HorizontalOptions="FillAndExpand" ReturnType="Search" Placeholder="输入关键字"></Entry>
+        <controls:TreeViewEx BackgroundColor="White"  x:Name="TheTreeView" Margin="4"  />
+    </StackLayout>
+    
 
 </ContentPage>
