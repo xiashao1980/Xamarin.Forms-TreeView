@@ -9,8 +9,8 @@ A tree control based on AdaptSolutions/Xamarin.Forms-TreeView
 3. Support node retrieval filtering
 4. Optimize the selection operation, click on the Label to select the node directly
 
-![pic1](pic/treeview_pic1.png)
-![pic2](pic/treeview_pic2.png)
+![pic1](/pic/treeview_pic1.png)
+![pic2](/pic/treeview_pic2.png)
 
 README.md from original version:
 ---------------------------------------
